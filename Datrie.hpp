@@ -3,8 +3,13 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 struct node{
+	node(int b=0, int v=0){
+		base = b;
+		value = v;
+	}
 	int base;
 	int value;
 };
@@ -12,8 +17,10 @@ struct node{
 
 struct area{
 	area(int s=0, int e=0, int f=0){
-		if (e == 0)
-			start = end = s, father=0;
+		if (e == 0){
+			start = s, father=0;
+			end = s + 1;
+		} 
 		else
 			start = s, end = e, father=f;			
 	}
@@ -22,6 +29,15 @@ struct area{
 		end = a.end;
 		father = a.father;
 	}
+	
+	bool operator==(const area &a){
+		return (start == a.start) && (end == a.end);
+	}
+	
+	bool operator!=(const area &a){
+		return (start != a.start) || (end != a.end);
+	}
+
 	int size(){
 		return end - start;
 	}
@@ -32,6 +48,8 @@ struct area{
 
 bool area_cmp(area a, area b);
 
+class AreaContainer;
+
 class Datrie{
 	public:
 		Datrie();
@@ -41,37 +59,40 @@ class Datrie{
 		int LEAF_VALUE = -2;
 		int ROOT_VALUE = -3;
 		int UNEXIST_VALUE = -1;
+		AreaContainer* mAreaContainer;
 		void display(int n);
 		void display_remain();
 		void display_used();
 		std::vector<area> remain_area;
 		std::vector<area> used_area;
-		//int find_remain(area new_area);
 		int find_remain(int range, int low_bound, int father);
 		void sort_remain(area new_area);
-
+		int get_size();
+		void double_size();
 	private:
-		node *base;
-		int *check;
+		std::vector<node> base;
+		std::vector<int> check;
 		int size;
 		int cnt;
-		void double_size();
+		int insert_cnt;
 		int solve_collision(int base_s, int coll_s);
 		void ret_remain(int ret_area);
 		int check_valid(int pos, int father);
+		void try_clean();
 };
 
 
 class AreaContainer{
-	private:
-		AreaContainer();
-		~AreaContainer();
+	public:
 		std::vector<area> areas;
 		std::vector<area> blocks;
-	public:
+		Datrie* mDatrie;
+		AreaContainer(Datrie* da);
+		~AreaContainer();
 		int get_base(int range);
 		void get_area(area pos);
 		void ret_area(area pos);
+		float used_rate();
 };
 
 #endif

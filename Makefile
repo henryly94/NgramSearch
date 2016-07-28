@@ -1,4 +1,4 @@
-CPP11 = g++ -std=c++11 
+CPP11 = g++ -std=c++11  
 
 all: main.o Datrie.o
 	$(CPP11)  -o main main.o Datrie.o

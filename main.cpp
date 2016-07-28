@@ -4,8 +4,10 @@
 #include <fstream>
 #include <vector>
 #include <stdlib.h>
+#include <time.h>
 
 Datrie* a;
+float MAX;
 
 void query(std::string key){
 	printf("%-10s:%8d\n", key.c_str(), a->query(key));
@@ -27,21 +29,24 @@ std::vector<std::string> bin_split(std::string ori_string, char delim=' '){
 }
 
 int main(int argc, char* argv[]){
-	if (argc > 1){
+	if (argc > 2){
+	 
 		a = new Datrie();
 		
 		a->display_remain();
 
-		a->sort_remain(area(5));
-		//a->find_remain(5);
 
 		a->display_remain();
 
-		a->sort_remain(area(10, 15));
 		//a->find_remain(33);
 
 		a->display_remain();	
 	} else {
+		if (argc == 2){
+			MAX = atoi(argv[1]);
+		} else {
+			MAX = 750371;
+		}
 	
 		std::ifstream in;
 	
@@ -50,28 +55,35 @@ int main(int argc, char* argv[]){
 		in.open(path.c_str(), std::ios_base::in);
 		
 		char buffer[128];
-
+		std::vector<std::string> pairs;
 		a = new Datrie();
-		
 		int cnt = 0, c_cnt = 0;
 //		printf("HHH\n");
-		while (in.getline(buffer, 128, '\n')){
+//
+		time_t time_start, time_end;
+
+		time_start = time(NULL);
+
+		while (!in.eof()){
+			in.getline(buffer, 128, '\n');
 			std::string str = std::string(buffer);
-			std::vector<std::string> pair = bin_split(str, '\t');
+			std::vector<std::string> pair = bin_split(str);
 			if (pair.size() == 2){
 				cnt++;
-				printf("---%d\r", cnt);
 				a->insert(pair[0].c_str(), atoi(pair[1].c_str()));
+				pairs.push_back(str);
 			}
+			printf("----%d%%----\r", (int)(cnt*100 / MAX));
+			fflush(stdout);
 		}
-		
-		in.close();
+		printf("\n");
+		printf("Using rate: %.3f %%\n", a->mAreaContainer->used_rate() * 100 );
+		time_end = time(NULL);
+		printf("Time: %.0f s\n", difftime(time_end, time_start));
 
-		in.open(path.c_str(), std::ios_base::in);	
-
-		while (in.getline(buffer, 128, '\n')){
-			std::string str = std::string(buffer);
-			std::vector<std::string> pair = bin_split(str, '\t');
+		for(std::string  _str : pairs){
+			std::string str = std::string(_str);
+			std::vector<std::string> pair = bin_split(str);
 			if (pair.size() == 2){
 				if (quiet_query(pair[0].c_str()) == atoi(pair[1].c_str())){
 					c_cnt++;
@@ -81,7 +93,6 @@ int main(int argc, char* argv[]){
 			}
 		}
 		
-		in.close();
 
 		printf("Correctness: %d/%d\n", c_cnt, cnt);
 
