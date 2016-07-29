@@ -50,7 +50,7 @@ int main(int argc, char* argv[]){
 	
 		std::ifstream in;
 	
-		std::string path("2.txt");	
+		std::string path("testfile");	
 
 		in.open(path.c_str(), std::ios_base::in);
 		

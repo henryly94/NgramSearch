@@ -51,7 +51,7 @@ struct area{
 	int end;
 	int father;
 };
-
+/*
 bool area_cmp(area a, area b){
 	return a.start < b.start;
 }
@@ -61,7 +61,7 @@ bool block_cmp(area a, area b){
 }
 
 typedef bool(*cmp)(area,area);
-
+*/
 struct areaFunc{
 	bool operator() (const area &a, const area &b){
 		return a.start < b.start;

@@ -64,7 +64,7 @@ inline void d(char ch){
 	printf("%c\n", ch);
 }
 
-
+/*
 bool Integrity(std::vector<area> a, std::vector<area> b){
 	std::vector<area>::iterator it;
 	for (area each : b){
@@ -76,7 +76,7 @@ bool Integrity(std::vector<area> a, std::vector<area> b){
 	}
 	return true;
 }
-
+*/
 int Datrie::get_size(){
 	return size;
 }
