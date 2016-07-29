@@ -1,0 +1,22 @@
+# vim
+
+*.swk
+*.swl
+*.swm
+*.swn
+*.swo
+*.swp
+*.txt
+
+
+# g++
+*.o
+*.out
+
+
+# other
+seg
+seg2
+vocab
+test*
+
