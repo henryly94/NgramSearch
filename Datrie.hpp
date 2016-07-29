@@ -16,24 +16,22 @@ struct node{
 
 
 struct area{
-	area(int s=0, int e=0, int f=0){
+	area(int s=0, int e=0){
 		if (e == 0){
-			start = s, father=0;
+			start = s;
 			end = s + 1;
 		} 
 		else
-			start = s, end = e, father=f;			
+			start = s, end = e;			
 	}
 	area(const area &a){
 		start = a.start;
 		end = a.end;
-		father = a.father;
 	}
 
 	area &operator=(const  area &a){
 		start = a.start;
 		end = a.end;
-		father = a.father;
 	}
 	
 	bool operator==(const area &a) const{ 
@@ -49,19 +47,8 @@ struct area{
 	}
 	int start;
 	int end;
-	int father;
 };
-/*
-bool area_cmp(area a, area b){
-	return a.start < b.start;
-}
 
-bool block_cmp(area a, area b){
-	return a.size() < b.size();
-}
-
-typedef bool(*cmp)(area,area);
-*/
 struct areaFunc{
 	bool operator() (const area &a, const area &b){
 		return a.start < b.start;

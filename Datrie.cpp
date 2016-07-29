@@ -167,29 +167,20 @@ void Datrie::insert(std::string key, int value){
 	}
 	base[s].value = value;
 	if (s > cnt) cnt = s;
-	insert_cnt++;
+/*	insert_cnt++;
 	if (insert_cnt >= BATCH_MAX){
 		printf("Try clean areas..\n");
 		insert_cnt = 0;
 		try_clean();
 	}
+*/	
 //	display_used();
 }
 
 void Datrie::double_size() {
 	if (size>=MAX_SIZE)exit(0);	
-	//node* tmp_base = base;
-	//int* tmp_check = check;
-	//base = new node[2*size];
-	
-
 	check.resize(2*size, NULL_VALUE);
 	base.resize(2*size, node(NULL_VALUE, NULL_VALUE));
-	//check = new int[2*size];
-	//memcpy(base, tmp_base, sizeof(node)*size);
-	//memcpy(check, tmp_check, sizeof(int)*size);
-	//memset(&base[size], NULL_VALUE, sizeof(node)*size);
-	//memset(&check[size], NULL_VALUE, sizeof(int)*size);
 	
 	if (mAreaContainer->areas.empty()){
 		mAreaContainer->areas.insert(area(size, size*2));
@@ -199,16 +190,13 @@ void Datrie::double_size() {
 		std::multiset<area>::const_iterator it = mAreaContainer->areas.end(), b_it;
 		it--;
 		if ((*it).end == size) {
-	//		d(66);
 			b_it = mAreaContainer->blocks.upper_bound(*it);
 			while ( !(*b_it == *it) || b_it == mAreaContainer->blocks.end()){
-	//			d(777);
 				--b_it;
 			}
 			area tmp((*it).start, size * 2);
 			mAreaContainer->areas.erase(it);
 			mAreaContainer->areas.insert(tmp);
-	//		printf("[%d, %d], %d\n", (*b_it).start, (*b_it).end, b_it==mAreaContainer->blocks.end());
 			mAreaContainer->blocks.erase(b_it);
 			mAreaContainer->blocks.insert(tmp);		
 		} else { 
@@ -218,11 +206,6 @@ void Datrie::double_size() {
 
 	}
 	size *= 2;
-
-	//delete []tmp_base;
-	//delete []tmp_check;
-	
-	//display_used();	
 	printf("Size:%-20d\n", size);
 }
 
