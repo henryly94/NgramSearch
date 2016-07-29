@@ -5,6 +5,9 @@
 #include <vector>
 #include <set>
 
+#define MAX_SIZE 100000000l
+
+
 struct node{
 	node(int b=0, int v=0){
 		base = b;
@@ -12,6 +15,7 @@ struct node{
 	}
 	int base;
 	int value;
+	std::vector<int> son;
 };
 
 
@@ -42,7 +46,7 @@ struct area{
 		return (start != a.start) || (end != a.end);
 	}
 
-	int size(){
+	int size() const{
 		return end - start;
 	}
 	int start;
@@ -57,7 +61,11 @@ struct areaFunc{
 
 struct blockFunc{
 	bool operator() (const area &a, const area &b){
-		return a.end - a.start  < b.end - b.start;
+		long long c_a, c_b;
+		c_a = a.size() * MAX_SIZE + a.start;
+		c_b = b.size() * MAX_SIZE + b.start;
+	//	printf("%lld, %lld\n", c_a, c_b);
+		return c_a < c_b;
 	}
 };
 
@@ -79,10 +87,13 @@ class Datrie{
 		void display_used();
 		std::vector<area> remain_area;
 		std::vector<area> used_area;
-		int find_remain(int range, int low_bound, int father);
-		void sort_remain(area new_area);
 		int get_size();
 		void double_size();
+		
+		int solve_cnt;
+
+		double solve_time, solve_1, solve_2, solve_3, solve_3_1, solve_3_2, solve_3_3;
+
 	private:
 		std::vector<node> base;
 		std::vector<int> check;
@@ -90,8 +101,6 @@ class Datrie{
 		int cnt;
 		int insert_cnt;
 		int solve_collision(int base_s, int coll_s);
-		void ret_remain(int ret_area);
-		int check_valid(int pos, int father);
 		void try_clean();
 };
 
@@ -107,6 +116,11 @@ class AreaContainer{
 		void get_area(area pos);
 		void ret_area(area pos);
 		float used_rate();
+
+		int get_area_cnt;
+		int ret_area_cnt;
+		double  get_area_time;
+		double ret_area_time;
 };
 
 #endif

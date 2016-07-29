@@ -5,7 +5,7 @@
 *.swm
 *.swn
 *.swo
-*.swp
+*.sw*
 *.txt
 
 

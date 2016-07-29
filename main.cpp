@@ -73,8 +73,8 @@ int main(int argc, char* argv[]){
 				a->insert(pair[0].c_str(), atoi(pair[1].c_str()));
 				pairs.push_back(str);
 			}
-			printf("----%d%%----\r", (int)(cnt*100 / MAX));
-			fflush(stdout);
+		//	printf("----%d%%----\r", (int)(cnt*100 / MAX));
+		//	fflush(stdout);
 		}
 		printf("\n");
 		printf("Using rate: %.3f %%\n", a->mAreaContainer->used_rate() * 100 );
@@ -95,6 +95,13 @@ int main(int argc, char* argv[]){
 		
 
 		printf("Correctness: %d/%d\n", c_cnt, cnt);
+
+		printf("===================\n");
+
+		printf("Get Area: %d, %lf \n", a->mAreaContainer->get_area_cnt, a->mAreaContainer->get_area_time);
+		printf("Ret Area: %d, %lf \n", a->mAreaContainer->ret_area_cnt, a->mAreaContainer->ret_area_time);
+		printf("Sol Coll: %d, %lf: %lf| %lf| %lf  \n", a->solve_cnt, a->solve_time, a->solve_1, a->solve_2, a->solve_3);
+		printf("Sol 3 detail: %lf, %lf, %lf \n", a->solve_3_1, a->solve_3_2, a->solve_3_3);
 
 //		a->display(100000);	
 	}

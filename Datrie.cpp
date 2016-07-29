@@ -5,8 +5,9 @@
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <sys/time.h>
+#include <time.h>
 
-#define MAX_SIZE 100000000
 #define RANGE ('z' - 'A' + 1)
 #define BATCH_MAX 2500
 #define USED_RATE_LIMIT 0.4
@@ -119,10 +120,6 @@ Datrie::Datrie(){
 	base.resize(size, node(NULL_VALUE, NULL_VALUE));
 	check.push_back(ROOT_VALUE);
 	check.resize(size, -1);
-	//memset(base, NULL_VALUE, sizeof(node)*size);
-	//memset(check, NULL_VALUE, sizeof(int)*size);
-	//base[0].base = 1;
-//	check[0] = ROOT_VALUE;
 	mAreaContainer = new AreaContainer(this);
 	mAreaContainer->areas.insert(area(1, size));
 	mAreaContainer->blocks.insert(area(1, size));
@@ -152,16 +149,24 @@ void Datrie::insert(std::string key, int value){
 		
 		while (t >= size)double_size();
 		if (t <= 0){
-			s = solve_collision(s, t);
+//			d(1);
+			t = solve_collision(s, t);
+			base[s].son.push_back(t);
+			s = t;
 		} else if (check[t] == -1){
-		//	display_used();
+//			d(2);
 			mAreaContainer->get_area(area(t));
 			check[t] = s;
 			base[t].base = base[s].base;
+			base[s].son.push_back(t);
 			s = t;	
 		} else if (check[t] != s) { // Collision
-			s = solve_collision(s, t);					       
+//			d(3);
+			t = solve_collision(s, t);					       
+			base[s].son.push_back(t);
+			s = t;
 		} else {
+//			d(4);
 			s = t;
 		}
 	}
@@ -174,10 +179,10 @@ void Datrie::insert(std::string key, int value){
 		try_clean();
 	}
 */	
-//	display_used();
 }
 
 void Datrie::double_size() {
+//	printf("In\n");
 	if (size>=MAX_SIZE)exit(0);	
 	check.resize(2*size, NULL_VALUE);
 	base.resize(2*size, node(NULL_VALUE, NULL_VALUE));
@@ -210,6 +215,9 @@ void Datrie::double_size() {
 }
 
 int Datrie::solve_collision(int base_s, int coll_s){
+	struct timeval t_begin, t_end, t_bla, t_cost, t_small_a, t_small_b;
+	gettimeofday(&t_begin, NULL);
+	
 	std::vector<int> offsets;
 	int old_base = base[base_s].base;
 	int coll_off = coll_s - old_base;
@@ -217,6 +225,13 @@ int Datrie::solve_collision(int base_s, int coll_s){
 	for (int i=std::max(old_base, 1); i<=old_base + RANGE; i++){
 		if (check[i] == base_s) offsets.push_back(i-old_base);
 	}
+
+	// phase 1
+	gettimeofday(&t_end, NULL);
+	timersub(&t_end, &t_begin, &t_cost);
+	solve_1 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
+
+
 	if (offsets.size() == 0){
 		range = 1;
 		low_bound = coll_off;
@@ -227,35 +242,83 @@ int Datrie::solve_collision(int base_s, int coll_s){
 	offsets.push_back(coll_off);
 	//new_base = find_remain(range, low_bound, base_s);
 	new_base = mAreaContainer->get_base(range) - low_bound;
+	
+	for (std::vector<int>::iterator it = base[base_s].son.begin(); it != base[base_s].son.end(); it++){
+		(*it) += (new_base - old_base);
+	}
+
+	// phase 2
+	gettimeofday(&t_bla, NULL);
+
+	timersub(&t_bla, &t_end, &t_cost);
+	solve_2 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
 
 //	for (auto each : offsets)printf("%d ", each);
 //	printf("\n");
 	base[base_s].base = new_base;
 
+
 	offsets.pop_back();	
 	for (int off : offsets){
+		gettimeofday(&t_small_a, NULL);
 		int new_pos = new_base + off;
 		int old_pos = old_base + off;
 		while(new_pos >= size)double_size();
 		check[new_pos] = base_s;
 		base[new_pos] = base[old_pos];
+
+		gettimeofday(&t_small_b, NULL);
+		timersub(&t_small_b, &t_small_a, &t_cost);
+		solve_3_1 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) /1000000;
+
 		check[old_pos] = NULL_VALUE;
 		base[old_pos].base = NULL_VALUE;
 		base[old_pos].value = NULL_VALUE;
+		base[old_pos].son.clear();
 //		display_used();
+
+		gettimeofday(&t_small_a, NULL);
+		timersub(&t_small_a, &t_small_b, &t_cost);
+		solve_3_2 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) /1000000;
+		
+//		d(50);
+
 		mAreaContainer->get_area(area(new_pos));
+		
+//		d(51);
 		mAreaContainer->ret_area(area(old_pos));
+
+//		d(52);
+		gettimeofday(&t_small_b, NULL);
+		timersub(&t_small_b, &t_small_a, &t_cost);
+		solve_3_3 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) /1000000;
+
+
+
 	}
 	base[new_base + coll_off].base = new_base;
 	check[new_base + coll_off] = base_s;
 //	display_used();
+//	d(40);
 	mAreaContainer->get_area(area(new_base + coll_off));
-	for (int i=0; i< size; i++){
-		std::vector<int>::iterator it = find(offsets.begin(), offsets.end(), check[i] - old_base);	
-		if (it != offsets.end()){
-			check[i] += (new_base - old_base);
-		}		
+//	d(41);
+
+	// phase 3
+	gettimeofday(&t_end, NULL);
+	timersub(&t_end, &t_bla, &t_cost);
+	solve_3 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
+
+	for (int each : offsets){
+		for (int every : base[each + new_base].son){
+			check[every] += (new_base - old_base);
+		}
 	}
+
+	gettimeofday(&t_bla, NULL);
+	solve_cnt++;
+	timersub(&t_bla, &t_end, &t_cost);
+	solve_time += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
+
 	return new_base + coll_off;
 }
 
@@ -276,8 +339,10 @@ int AreaContainer::get_base(int range){
 //	printf("Want range: %d\n", range);
 	std::multiset<area>::iterator it = blocks.lower_bound(area(0, range));
 	if (it != blocks.end()){
+//		d(20);
 		return (*it).start;
 	} else {
+//		d(21);
 //		printf("Container Double_Size\n");
 		mDatrie->double_size();
 		return get_base(range);	
@@ -285,6 +350,8 @@ int AreaContainer::get_base(int range){
 }
 
 void AreaContainer::get_area(area  pos){
+	struct timeval t_begin, t_end, t_cost;
+	gettimeofday(&t_begin, NULL);
 	if (pos.size() <= 0) return;
 //	printf("Getting [%d, %d)\n", pos.start, pos.end);
 	std::multiset<area>::iterator it = areas.upper_bound(pos), b_it;
@@ -292,34 +359,49 @@ void AreaContainer::get_area(area  pos){
 		it--;
 		area tmp(*it);
 	//	printf("tmp: [%d, %d)\n", tmp.start, tmp.end);
+	
+//		d(30);
 		areas.erase(it);
-		b_it = blocks.upper_bound(tmp);
-		while (*b_it != tmp)--b_it;
+//		d(31);
+		b_it = blocks.lower_bound(tmp);
+//		while (*b_it != tmp)--b_it;
 		blocks.erase(b_it);
+//		d(32);
 //		if (tmp.start < pos.start - 5)
 		{
 			area front(tmp.start, pos.start);
 			areas.insert(front);
 			blocks.insert(front);
 		}
+//		d(33);
 //		if (tmp.end > pos.end + 5)
 		{
 			area back(pos.end, tmp.end);
 			areas.insert(back);
 			blocks.insert(back);
 		}
+//		d(34);
 	}
+	get_area_cnt++;
+	gettimeofday(&t_end, NULL);
+	timersub(&t_end, &t_begin, &t_cost);
+	get_area_time += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
+//	printf("After Get\n");
+//	mDatrie->display_used();
 //	printf("Out\n");
 }
 
 void AreaContainer::ret_area(area pos){
+//	printf("Returning [%d, %d)\n", pos.start, pos.end);
+	struct timeval t_begin, t_end, t_cost;
+	gettimeofday(&t_begin, NULL);
 	std::multiset<area>::const_iterator it, b_it;
 	it = areas.upper_bound(pos);
 	if (it != areas.begin()){
 		area tmp(*it);
 		if ((*it).start == pos.end){
-			b_it = blocks.upper_bound(tmp);
-			while((*b_it) != tmp)--b_it;
+			b_it = blocks.lower_bound(tmp);
+//			while((*b_it) != tmp)--b_it;
 			pos.end = tmp.end;
 			it = areas.erase(it);
 			blocks.erase(b_it);
@@ -330,8 +412,8 @@ void AreaContainer::ret_area(area pos){
 		tmp = *it;
 
 		if ((*it).end == pos.start){
-			b_it = blocks.upper_bound(tmp);
-			while((*b_it) != tmp)--b_it;
+			b_it = blocks.lower_bound(tmp);
+//			while((*b_it) != tmp)--b_it;
 			pos.start = tmp.start;
 			areas.erase(it);
 			blocks.erase(b_it);
@@ -347,24 +429,29 @@ void AreaContainer::ret_area(area pos){
 		if ((*it).start == pos.end){
 			area front(pos.start, (*it).end);
 			area tmp(*it);
-			b_it = blocks.upper_bound(tmp);
-			while((*b_it) != tmp)--b_it; 
+			b_it = blocks.lower_bound(tmp);
+//			while((*b_it) != tmp)--b_it; 
 			areas.erase(it);
 			blocks.erase(b_it);
-//			if (front.size() >= 5)
+		//	if (front.size() >= 5)
 			{
 				areas.insert(front);
 				blocks.insert(front);
 			}
 		} else {
-//			if (pos.size() >= 5)
+		//	if (pos.size() >= 5)
 			{
 				areas.insert(pos);
 				blocks.insert(pos);
 			}
 		}
 	}
-
+	ret_area_cnt++;
+	gettimeofday(&t_end, NULL);
+	timersub(&t_end, &t_begin, &t_cost);
+	ret_area_time += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
+//	printf("After Ret\n");
+//	mDatrie->display_used();
 }
 
 float AreaContainer::used_rate(){
