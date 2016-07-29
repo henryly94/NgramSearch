@@ -29,12 +29,18 @@ struct area{
 		end = a.end;
 		father = a.father;
 	}
+
+	area &operator=(const  area &a){
+		start = a.start;
+		end = a.end;
+		father = a.father;
+	}
 	
-	bool operator==(const area &a){
+	bool operator==(const area &a) const{ 
 		return (start == a.start) && (end == a.end);
 	}
 	
-	bool operator!=(const area &a){
+	bool operator!=(const area &a)const{
 		return (start != a.start) || (end != a.end);
 	}
 
@@ -46,7 +52,28 @@ struct area{
 	int father;
 };
 
-bool area_cmp(area a, area b);
+bool area_cmp(area a, area b){
+	return a.start < b.start;
+}
+
+bool block_cmp(area a, area b){
+	return a.size() < b.size();
+}
+
+typedef bool(*cmp)(area,area);
+
+struct areaFunc{
+	bool operator() (const area &a, const area &b){
+		return a.start < b.start;
+	}
+};
+
+struct blockFunc{
+	bool operator() (const area &a, const area &b){
+		return a.end - a.start  < b.end - b.start;
+	}
+};
+
 
 class AreaContainer;
 
@@ -84,8 +111,8 @@ class Datrie{
 
 class AreaContainer{
 	public:
-		std::vector<area> areas;
-		std::vector<area> blocks;
+		std::multiset<area, areaFunc> areas;
+		std::multiset<area, blockFunc> blocks;
 		Datrie* mDatrie;
 		AreaContainer(Datrie* da);
 		~AreaContainer();

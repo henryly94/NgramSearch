@@ -28,14 +28,15 @@ int hash(std::string str){
 	}
 	return ret;
 }
-
-inline bool area_cmp(area a, area b){
+/*
+bool area_cmp(area a, area b){
 	return a.start < b.start;
 }
 
-inline bool block_cmp(area a, area b){
+bool block_cmp(area a, area b){
 	return a.size() < b.size();
 }
+*/
 
 std::vector<std::string> split(std::string str){
 	std::vector<std::string> ret;
@@ -98,17 +99,15 @@ void Datrie::display_remain(){
 
 void Datrie::display_used(){
 	printf("Areas:");
-	for (auto each : mAreaContainer->areas){
+	for (area each : mAreaContainer->areas){
 		printf("[%d, %d] ", each.start, each.end);
 	}
 	printf("\n");
 	printf("Blocks:");
-	for (auto each : mAreaContainer->blocks){
+	for (area each : mAreaContainer->blocks){
 		printf("[%d, %d] ", each.start, each.end);
 	}
 	printf("\n");
-
-
 }
 
 
@@ -125,8 +124,8 @@ Datrie::Datrie(){
 	//base[0].base = 1;
 //	check[0] = ROOT_VALUE;
 	mAreaContainer = new AreaContainer(this);
-	mAreaContainer->areas.push_back(area(1, size));
-	mAreaContainer->blocks.push_back(area(1, size));
+	mAreaContainer->areas.insert(area(1, size));
+	mAreaContainer->blocks.insert(area(1, size));
 }
 
 int Datrie::query(std::string key){
@@ -155,6 +154,7 @@ void Datrie::insert(std::string key, int value){
 		if (t <= 0){
 			s = solve_collision(s, t);
 		} else if (check[t] == -1){
+		//	display_used();
 			mAreaContainer->get_area(area(t));
 			check[t] = s;
 			base[t].base = base[s].base;
@@ -173,6 +173,7 @@ void Datrie::insert(std::string key, int value){
 		insert_cnt = 0;
 		try_clean();
 	}
+//	display_used();
 }
 
 void Datrie::double_size() {
@@ -191,25 +192,28 @@ void Datrie::double_size() {
 	//memset(&check[size], NULL_VALUE, sizeof(int)*size);
 	
 	if (mAreaContainer->areas.empty()){
-		mAreaContainer->areas.insert(mAreaContainer->areas.end(), area(size, size*2));
-		mAreaContainer->blocks.insert(mAreaContainer->blocks.end(), area(size, size*2));
+		mAreaContainer->areas.insert(area(size, size*2));
+		mAreaContainer->blocks.insert(area(size, size*2));
 	} else {
 
-		std::vector<area>::iterator it = mAreaContainer->areas.end(), b_it;
-		if ((*(it-1)).end == size) {
+		std::multiset<area>::const_iterator it = mAreaContainer->areas.end(), b_it;
+		it--;
+		if ((*it).end == size) {
 	//		d(66);
-			b_it = upper_bound(mAreaContainer->blocks.begin(), mAreaContainer->blocks.end(), *(it-1), block_cmp);
-			while (*b_it != *(it-1) || b_it == mAreaContainer->blocks.end()){
+			b_it = mAreaContainer->blocks.upper_bound(*it);
+			while ( !(*b_it == *it) || b_it == mAreaContainer->blocks.end()){
 	//			d(777);
 				--b_it;
 			}
-			(*(it-1)).end = size*2;
+			area tmp((*it).start, size * 2);
+			mAreaContainer->areas.erase(it);
+			mAreaContainer->areas.insert(tmp);
 	//		printf("[%d, %d], %d\n", (*b_it).start, (*b_it).end, b_it==mAreaContainer->blocks.end());
 			mAreaContainer->blocks.erase(b_it);
-			mAreaContainer->blocks.insert(mAreaContainer->blocks.end(), *(it-1));		
+			mAreaContainer->blocks.insert(tmp);		
 		} else { 
-			mAreaContainer->areas.insert(it, area(size, size*2));
-			mAreaContainer->blocks.insert(mAreaContainer->blocks.end(), area(size, size*2));
+			mAreaContainer->areas.insert(area(size, size*2));
+			mAreaContainer->blocks.insert(area(size, size*2));
 		}
 
 	}
@@ -255,11 +259,13 @@ int Datrie::solve_collision(int base_s, int coll_s){
 		check[old_pos] = NULL_VALUE;
 		base[old_pos].base = NULL_VALUE;
 		base[old_pos].value = NULL_VALUE;
+//		display_used();
 		mAreaContainer->get_area(area(new_pos));
 		mAreaContainer->ret_area(area(old_pos));
 	}
 	base[new_base + coll_off].base = new_base;
 	check[new_base + coll_off] = base_s;
+//	display_used();
 	mAreaContainer->get_area(area(new_base + coll_off));
 	for (int i=0; i< size; i++){
 		std::vector<int>::iterator it = find(offsets.begin(), offsets.end(), check[i] - old_base);	
@@ -268,22 +274,6 @@ int Datrie::solve_collision(int base_s, int coll_s){
 		}		
 	}
 	return new_base + coll_off;
-}
-
-
-int  Datrie::check_valid(int pos, int father){
-//	printf("pos: %d\n", pos);
-	if (used_area.size() == 0) return 1;
-	std::vector<area>::iterator it = upper_bound(used_area.begin(), used_area.end(), area(pos, pos+1, father), area_cmp);
-	if (it != used_area.begin()){
-		if (pos >= (*(it-1)).end){
-			return 1;
-		} else {
-			return father == (*(it-1)).father? 2 :0;
-		}
-	} else {
-		return 1;
-	}
 }
 
 void Datrie::try_clean(){
@@ -297,12 +287,11 @@ void Datrie::try_clean(){
 
 AreaContainer::AreaContainer(Datrie* da){
 	mDatrie = da;
-	
 }
 
 int AreaContainer::get_base(int range){
 //	printf("Want range: %d\n", range);
-	std::vector<area>::iterator it = lower_bound(blocks.begin(), blocks.end(), area(0, range), block_cmp);
+	std::multiset<area>::iterator it = blocks.lower_bound(area(0, range));
 	if (it != blocks.end()){
 		return (*it).start;
 	} else {
@@ -315,80 +304,84 @@ int AreaContainer::get_base(int range){
 void AreaContainer::get_area(area  pos){
 	if (pos.size() <= 0) return;
 //	printf("Getting [%d, %d)\n", pos.start, pos.end);
-	std::vector<area>::iterator it = upper_bound(areas.begin(), areas.end(), pos, area_cmp);
-	if (it != areas.begin()) {
-		std::vector<area>::iterator b_it = upper_bound(blocks.begin(), blocks.end(), *(it-1), block_cmp);
-		while((*b_it).start != (*(it-1)).start || (*b_it).end != (*(it-1)).end) {
-			--b_it;
-//			if ((*b_it).size() <  (*it).size())break;
+	std::multiset<area>::iterator it = areas.upper_bound(pos), b_it;
+	if (it != areas.begin()){
+		it--;
+		area tmp(*it);
+	//	printf("tmp: [%d, %d)\n", tmp.start, tmp.end);
+		areas.erase(it);
+		b_it = blocks.upper_bound(tmp);
+		while (*b_it != tmp)--b_it;
+		blocks.erase(b_it);
+//		if (tmp.start < pos.start - 5)
+		{
+			area front(tmp.start, pos.start);
+			areas.insert(front);
+			blocks.insert(front);
 		}
-		if ((*(it-1)).end >= pos.end) {
-			blocks.erase(b_it);
-			int end = (*(it-1)).end;
-			(*(it-1)).end = pos.start;
-			area front(*(it-1));
-			if (end > pos.end){
-				area back(pos.end, end);
-//				if (back.size() >= 5)
-				{
-					it = areas.insert(it, back);
-					b_it = upper_bound(blocks.begin(), blocks.end(), back, block_cmp);
-					blocks.insert(b_it, back);
-				}
-			}
-//			if ((*(it-1)).size() >= 5)
-			if ((*(it-1)).size())
-			{
-				b_it = upper_bound(blocks.begin(), blocks.end(), front, block_cmp);
-				blocks.insert(b_it, front);
-			} else {
-				areas.erase(it-1);
-			}
+//		if (tmp.end > pos.end + 5)
+		{
+			area back(pos.end, tmp.end);
+			areas.insert(back);
+			blocks.insert(back);
 		}
 	}
-
-
+//	printf("Out\n");
 }
 
 void AreaContainer::ret_area(area pos){
-	std::vector<area>::iterator it = upper_bound(areas.begin(), areas.end(), pos, area_cmp), b_it;	
+	std::multiset<area>::const_iterator it, b_it;
+	it = areas.upper_bound(pos);
 	if (it != areas.begin()){
-		if ((*(it-1)).end == pos.start){
-			pos.start = (*(it-1)).start;
-			b_it = upper_bound(blocks.begin(), blocks.end(), *(it-1), block_cmp);
-			while (*b_it != *(it-1) || b_it == blocks.end())--b_it;
-			blocks.erase(b_it);
-			it = areas.erase(it-1);
-		} 
+		area tmp(*it);
 		if ((*it).start == pos.end){
-			pos.end = (*it).end;
-			b_it = upper_bound(blocks.begin(), blocks.end(), *it, block_cmp);
-			while (*b_it != *it || b_it == blocks.end())--b_it;
-			blocks.erase(b_it);
+			b_it = blocks.upper_bound(tmp);
+			while((*b_it) != tmp)--b_it;
+			pos.end = tmp.end;
 			it = areas.erase(it);
+			blocks.erase(b_it);
 		}
-//		if (pos.size() >= 5)
-		{
-			it = areas.insert(it, pos);
-			b_it = upper_bound(blocks.begin(), blocks.end(), *it, block_cmp);
-			blocks.insert(b_it, pos);	
-		}
-	} else {
 
-		if ((*it).start == pos.end){
-			b_it = upper_bound(blocks.begin(), blocks.end(), *it, block_cmp);
-			while(b_it == blocks.end() || *b_it != *it)--b_it;
+		it--;
+		
+		tmp = *it;
+
+		if ((*it).end == pos.start){
+			b_it = blocks.upper_bound(tmp);
+			while((*b_it) != tmp)--b_it;
+			pos.start = tmp.start;
+			areas.erase(it);
 			blocks.erase(b_it);
-			pos.end = (*it).end;
-			it = areas.erase(it);
 		}
 //		if (pos.size() >= 5)
 		{
-			areas.insert(it, pos);
-			b_it = upper_bound(blocks.begin(), blocks.end(), pos, block_cmp);
-			blocks.insert(b_it, pos);
+			areas.insert(pos);
+			blocks.insert(pos);
+		}
+
+
+	} else {
+		if ((*it).start == pos.end){
+			area front(pos.start, (*it).end);
+			area tmp(*it);
+			b_it = blocks.upper_bound(tmp);
+			while((*b_it) != tmp)--b_it; 
+			areas.erase(it);
+			blocks.erase(b_it);
+//			if (front.size() >= 5)
+			{
+				areas.insert(front);
+				blocks.insert(front);
+			}
+		} else {
+//			if (pos.size() >= 5)
+			{
+				areas.insert(pos);
+				blocks.insert(pos);
+			}
 		}
 	}
+
 }
 
 float AreaContainer::used_rate(){
