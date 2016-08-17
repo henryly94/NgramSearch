@@ -12,21 +12,137 @@
 #include <time.h>
 #include <unistd.h>
 #include <fstream>
+#include <iostream>
+
+using std::cout;
+using std::endl;
+
+#define WRITE(x) write((char*)&x, 4)
+#define READ(x) read((char*)&x, 4)
+
+inline void d(int n){
+	printf("%d\n", n);
+}
+
+inline void d(){
+	printf("\n");
+}
+
+inline void d(char ch){
+	printf("%c\n", ch);
+}
+
+inline vector<string> split_phrase(string phrase, char delim=' '){
+	vector<string> result;
+	int head = 0, tail;
+	for (tail=0; tail<phrase.size(); tail++){
+		if (phrase[tail] == delim){
+			if (tail > head){
+				result.push_back(phrase.substr(head, tail - head));
+			}
+			head = tail + 1;
+		}
+	}
+	if (head <= tail){
+		result.push_back(phrase.substr(head, tail-head));
+	}
+	return result;
+}	
+
 inline int has(int n){
 	return n;
 }
 
-int hash(char ch){
-	if ((ch < 'A' || ch > 'z') && ch != ' ') return 0;
-	else return ch == ' ' ? 'z' - 'A' + 2  : ch - 'A' + 1;
+int Datrie::hash(std::string str, int (*func)(std::string)){
+	return func(str);
 }
 
-int hash(std::string str){
+int Datrie::hash(char ch){
+	if ((ch < 'A' || ch > 'Z') && (ch < 'a' || ch > 'z') && (ch > '9' || ch < '0') && ch != '\'' && ch != ' ') return 0;
+	else if (ch >= 'A' && ch <= 'Z'){
+		return ch - 'A' + 1;
+	} else if (ch >= 'a' && ch <= 'z'){
+		return ch - 'a' + 27;
+	} else if (ch >= '0' && ch <= '9'){
+		return ch - '0' + 53;
+	} else if (ch == '\''){
+		return 63;
+	} else { // 'space'
+		return 64;
+	}
+}
+
+int Datrie::hash(std::string str){
 	int ret = 0;
 	for(int i=0; i<str.size(); i++){
 		ret = (ret * RANGE) + hash(str[i]);
 	}
 	return ret;
+}
+
+int Datrie::word_hash(string str){
+	unordered_map<string,int>::iterator it = alphabet.find(str);
+	if (it != alphabet.end()){
+		return it->second;
+	} else {
+		return UNEXIST_VALUE;
+	}
+}
+
+
+void Datrie::word_insert(string key, int value){
+	int s = 0, t, ch;
+	for (auto  each : split_phrase(key)){
+		new_word(each);
+		ch = word_hash(each);
+		t = base[s].base + ch;
+		while (t >= size)double_size();
+		if (t <= 0){
+			t = solve_collision(s, t);
+			base[s].son.push_back(t);
+			s = t;
+		} else if (check[t] == -1){
+			mAreaContainer->get_area(area(t));
+			check[t] = s;
+			base[t].base = base[s].base;
+			base[s].son.push_back(t);
+			s = t;	
+		} else if (check[t] != s) { // Collision
+			t = solve_collision(s, t);					       
+			base[s].son.push_back(t);
+			s = t;
+		} else {
+			s = t;
+		}
+	}
+	base[s].value = value;
+
+}
+
+void Datrie::new_word(string word){
+	if (alphabet.find(word) != alphabet.end()){
+		return;
+	} else {
+		alphabet.insert(make_pair(word, hash_cnt));
+		hash_cnt++;
+		RANGE = hash_cnt;
+	}
+}
+
+int Datrie::word_query(string key){
+	int s = 0;
+	int t;
+	for (auto each : split_phrase(key)){
+		int ch = word_hash(each);
+		t = base[s].base + ch;
+		if (check[t] == s){
+			s = t;
+		} else {
+			return UNEXIST_VALUE;
+		}
+	}
+	return base[s].value;
+
 }
 
 std::vector<std::string> split(std::string str, char delim = ' '){
@@ -58,18 +174,6 @@ std::vector<int> split_son(std::string str, char delim = '|'){
 	return ret;
 }
 
-inline void d(int n){
-	printf("%d\n", n);
-}
-
-inline void d(){
-	printf("\n");
-}
-
-inline void d(char ch){
-	printf("%c\n", ch);
-}
-
 
 int Datrie::get_size(){
 	return size;
@@ -83,6 +187,22 @@ void Datrie::display(int n){
 		printf("%-3d:   %12d   %12d   %12d\n", i, base[i].base, base[i].value, check[i]);
 	}
 }
+
+void Datrie::build_alphabet(string path){
+	ifstream in(path);
+	string word;
+	while (!in.eof()){
+		in >> word;
+		alphabet.insert(std::make_pair(word, hash_cnt));
+		hash_cnt++;
+	}
+	in.close();
+	RANGE = hash_cnt;
+	
+
+	BUILD_FLAG = true;
+}
+
 
 void Datrie::display_used(){
 	printf("Areas:");
@@ -126,6 +246,14 @@ int Datrie::query(std::string key){
 	return base[s].value;
 }
 
+int Datrie::query(char* key){
+	return query(std::string(key));
+}
+
+void Datrie::insert(char* key, int value){
+	insert(std::string(key), value);
+}
+
 void Datrie::insert(std::string key, int value){
 //	printf("Insert: %s\n", key.c_str());
 	int s = 0, t, ch;
@@ -145,7 +273,7 @@ void Datrie::insert(std::string key, int value){
 			base[s].son.push_back(t);
 			s = t;	
 		} else if (check[t] != s) { // Collision
-			t = solve_collision(s, t);					       
+			t = solve_collision(s, t); 
 			base[s].son.push_back(t);
 			s = t;
 		} else {
@@ -189,22 +317,22 @@ void Datrie::double_size() {
 }
 
 int Datrie::solve_collision(int base_s, int coll_s){
-	struct timeval t_begin, t_end, t_bla, t_cost, t_small_a, t_small_b;
-	gettimeofday(&t_begin, NULL);
-	
+		
 	std::vector<int> offsets;
 	int old_base = base[base_s].base;
 	int coll_off = coll_s - old_base;
 	int new_base, range, low_bound;
+	
+	std::sort(base[base_s].son.begin(), base[base_s].son.end());
+
+	for (auto each : base[base_s].son){
+		offsets.push_back(each - old_base);
+	}
+	/*
 	for (int i=std::max(old_base, 1); i<=old_base + RANGE; i++){
 		if (check[i] == base_s) offsets.push_back(i-old_base);
-	}
-
-	// phase 1
-	gettimeofday(&t_end, NULL);
-	timersub(&t_end, &t_begin, &t_cost);
-	solve_1 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
-
+	}	
+	*/
 
 	if (offsets.size() == 0){
 		range = 1;
@@ -220,66 +348,38 @@ int Datrie::solve_collision(int base_s, int coll_s){
 		(*it) += (new_base - old_base);
 	}
 
-	// phase 2
-	gettimeofday(&t_bla, NULL);
-
-	timersub(&t_bla, &t_end, &t_cost);
-	solve_2 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
-
 	base[base_s].base = new_base;
 
 
 	offsets.pop_back();	
 	for (int off : offsets){
-		gettimeofday(&t_small_a, NULL);
 		int new_pos = new_base + off;
 		int old_pos = old_base + off;
 		while(new_pos >= size)double_size();
+
 		check[new_pos] = base_s;
 		base[new_pos] = base[old_pos];
-
-		gettimeofday(&t_small_b, NULL);
-		timersub(&t_small_b, &t_small_a, &t_cost);
-		solve_3_1 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) /1000000;
 
 		check[old_pos] = NULL_VALUE;
 		base[old_pos].base = NULL_VALUE;
 		base[old_pos].value = NULL_VALUE;
 		base[old_pos].son.clear();
 
-		gettimeofday(&t_small_a, NULL);
-		timersub(&t_small_a, &t_small_b, &t_cost);
-		solve_3_2 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) /1000000;
-		
+	
 		mAreaContainer->get_area(area(new_pos));
 		mAreaContainer->ret_area(area(old_pos));
-
-		gettimeofday(&t_small_b, NULL);
-		timersub(&t_small_b, &t_small_a, &t_cost);
-		solve_3_3 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) /1000000;
-
-
 
 	}
 	base[new_base + coll_off].base = new_base;
 	check[new_base + coll_off] = base_s;
 	mAreaContainer->get_area(area(new_base + coll_off));
 
-	// phase 3
-	gettimeofday(&t_end, NULL);
-	timersub(&t_end, &t_bla, &t_cost);
-	solve_3 += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
 
 	for (int each : offsets){
 		for (int every : base[each + new_base].son){
 			check[every] += (new_base - old_base);
 		}
 	}
-
-	gettimeofday(&t_bla, NULL);
-	solve_cnt++;
-	timersub(&t_bla, &t_end, &t_cost);
-	solve_time += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
 
 	return new_base + coll_off;
 }
@@ -299,11 +399,11 @@ void Datrie::save_info(std::string path){
 	char buf[128];
 	sprintf(buf, "/%08d.nsi", ID);
 	path.append(buf);
-	std::ofstream out(path);
+	std::ofstream out(path, std::ios::binary);
 
 	// Infos
-	out << size << std::endl;
-	out << cnt << std::endl;
+	out.WRITE(size);
+	out.WRITE(cnt);
 	out.close();
 }
 
@@ -311,20 +411,19 @@ void Datrie::save_arrays(std::string path){
 	char buf[128];
 	sprintf(buf, "/%08d.nsd", ID);
 	path.append(buf);
-	std::ofstream out(path);
+	std::ofstream out(path, std::ios::binary);
 	for (int i=0; i<=cnt; i++){
 		if (check[i] != NULL_VALUE){
-			out << i << '\t' << base[i].base << '\t' << base[i].value << '\t' << check[i] << '\t';
-			if (base[i].son.empty()){
-				out << '|';
-			}
+			out.WRITE(i);
+			out.WRITE(base[i].base);
+			out.WRITE(base[i].value);
+			out.WRITE(check[i]);
+			int tmp_size = base[i].son.size();
+			out.WRITE(tmp_size);
+
 			for (int each : base[i].son){
-				if (each != *base[i].son.begin()) {
-					out << '|';
-				}
-				out << each;
+				out.WRITE(each);
 			}
-			out << std::endl;
 		}
 	}
 
@@ -344,12 +443,13 @@ void Datrie::load(std::string path, int id, Datrie::loadmode lm){
 			char buf[128];
 			sprintf(buf, "/%08d.nsi", id);
 			path.append(buf);
-			in.open(path);
+			in.open(path, std::ios_base::in | std::ios_base::binary);
 			if (!in.is_open()){
 				printf("No such File when open:%s\n", path.c_str());
 				return;
 			}
-			in >> size >> cnt;
+			in.READ(size);
+			in.READ(cnt);
 			base.clear();
 			base.shrink_to_fit();
 			check.clear();
@@ -361,7 +461,7 @@ void Datrie::load(std::string path, int id, Datrie::loadmode lm){
 			path = base_path;
 			sprintf(buf, "/%08d.nsd", id);
 			path.append(buf);
-			in.open(path.c_str());
+			in.open(path.c_str(), std::ios_base::in | std::ios_base::binary);
 			if (!in.is_open()){
 				printf("No such file when open:%s\n", path.c_str());
 				return;
@@ -371,18 +471,22 @@ void Datrie::load(std::string path, int id, Datrie::loadmode lm){
 			char buffer[1024];
 			int index;
 			while (!in.eof()){
-				in >> index;
-				in >> base[index].base;
-			        in >> base[index].value;
-			       	in >> check[index];
-				in >> buffer;
-				base[index].son = split_son(std::string(buffer));	
+				in.READ(index);
+				in.READ(base[index].base);
+			        in.READ(base[index].value);
+			       	in.READ(check[index]);
+				int N, tmp;
+				in.READ(N);
+				for (int i=0; i<N; i++){
+					in.READ(tmp);
+					base[index].son.push_back(tmp);	
+				}
 			}
 			in.close();
 			path = base_path;
 			sprintf(buf, "/%08d.nsa", id);
 			path.append(buf);
-			in.open(path.c_str());
+			in.open(path.c_str(), std::ios_base::in | std::ios_base::binary);
 			if (!in.is_open()){
 				printf("No such file when open:%s\n", path.c_str());
 				return;
@@ -390,9 +494,10 @@ void Datrie::load(std::string path, int id, Datrie::loadmode lm){
 			mAreaContainer->areas.clear();
 			mAreaContainer->blocks.clear();
 			while (!in.eof()){
-				in >> buffer;
-				area_se = split_son(std::string(buffer), ',');
-				area new_area(area_se[0], area_se[1]);
+				int tmp_start, tmp_end;
+				in.READ(tmp_start);
+				in.READ(tmp_end);
+				area new_area(tmp_start, tmp_end);
 				mAreaContainer->areas.insert(new_area);
 				mAreaContainer->blocks.insert(new_area);
 			}
@@ -435,8 +540,6 @@ int AreaContainer::get_base(int range){
 }
 
 void AreaContainer::get_area(area  pos){
-	struct timeval t_begin, t_end, t_cost;
-	gettimeofday(&t_begin, NULL);
 	if (pos.size() <= 0) return;
 	if (pos.end > mDatrie->cnt) mDatrie->cnt = pos.end;
 
@@ -458,15 +561,9 @@ void AreaContainer::get_area(area  pos){
 			blocks.insert(back);
 		}
 	}
-	get_area_cnt++;
-	gettimeofday(&t_end, NULL);
-	timersub(&t_end, &t_begin, &t_cost);
-	get_area_time += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
 }
 
 void AreaContainer::ret_area(area pos){
-	struct timeval t_begin, t_end, t_cost;
-	gettimeofday(&t_begin, NULL);
 	std::multiset<area>::const_iterator it, b_it;
 	it = areas.upper_bound(pos);
 	if (it != areas.begin()){
@@ -509,10 +606,6 @@ void AreaContainer::ret_area(area pos){
 			}
 		}
 	}
-	ret_area_cnt++;
-	gettimeofday(&t_end, NULL);
-	timersub(&t_end, &t_begin, &t_cost);
-	ret_area_time += t_cost.tv_sec + (1.0 * t_cost.tv_usec) / 1000000;
 }
 
 float AreaContainer::used_rate(){
@@ -528,10 +621,11 @@ void AreaContainer::save(std::string path){
 	char buf[128];
 	sprintf(buf, "/%08d.nsa", mDatrie->ID);
 	path.append(buf);
-	std::ofstream out(path.c_str());
+	std::ofstream out(path.c_str(), std::ios_base::binary);
 	
 	for (auto each : areas){
-		out << each.start << ',' << each.end << std::endl;
+		out.WRITE(each.start);
+	        out.WRITE(each.end);
 	}	
 	out.close();
 }

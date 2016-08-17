@@ -23,4 +23,5 @@ test*
 testfile
 clean*
 h.sh
-
+word*
+makeup.py

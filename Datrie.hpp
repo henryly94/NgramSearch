@@ -4,11 +4,19 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <unordered_map>
 
+#define UP '~'
+#define DOWN '!'
 #define MAX_SIZE 1000000000
-#define RANGE ('z' - 'A' + 2)
 #define BATCH_MAX 2500
 #define USED_RATE_LIMIT 0.4
+
+using std::string;
+using std::unordered_map;
+using std::vector;
+using std::ifstream;
+using std::ofstream;
 
 
 struct node{
@@ -82,14 +90,21 @@ class Datrie{
 		//	Basic User Interface
 		//=====================================
 
+		int query(char* key);
+
 		int query(std::string key);
 		
+		void insert(char* key, int value);
+
 		void insert(std::string key, int value);
 
 		void save(std::string path);
 
 		void load(std::string path, int id = 0, loadmode lm = Cover);
+		
+		void word_insert(string key, int value);
 
+		int word_query(string key);
 
 		//======================================
 		//	Support class members
@@ -100,6 +115,10 @@ class Datrie{
 		int get_size();
 
 		AreaContainer* get_areaContainer();
+
+		void build_alphabet(string path);
+		
+		void new_word(string word);
 
 		//Support function to show inner condition
 		void display(int n);
@@ -112,7 +131,22 @@ class Datrie{
 	private:	
 		int ID;
 
+		unordered_map<string,int> alphabet;
+
+		bool BUILD_FLAG = false;
+
+		int hash_cnt = 1;
+		
+		int word_hash(string str);
+
+		int hash(char ch);
+
+		int hash(string str, int (*func)(string));
+
+		int hash(string str);
+
 		// Predetermined Values
+		int RANGE = 65;
 		int NULL_VALUE = -1;
 		int LEAF_VALUE = -2;
 		int ROOT_VALUE = -3;
