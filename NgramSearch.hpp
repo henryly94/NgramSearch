@@ -39,9 +39,9 @@ class mQueue{
 		}
 
 		void push(Datrie* new_entry){
-			//cout << "Push " << new_entry->get_id() << '\n';
+		//	cout << "Push " << new_entry->get_id() << '\n';
 			if (has(new_entry->get_id()) != NULL) {
-			//	cout << "Already has " << '\n';
+		//		cout << "Already has " << '\n';
 				return;
 			}
 			if (cnt == size){
@@ -54,9 +54,9 @@ class mQueue{
 		}
 
 		void pop(){
-			//cout << "Pop ";
+		//	cout << "Pop ";
 			if (cnt == 0) return;
-			//cout << data[head]->get_id() << '\n';
+		//	cout << data[head]->get_id() << '\n';
 			if (data[head]->dirty){
 				data[head]->save(mPath);
 			}
@@ -73,6 +73,23 @@ class mQueue{
 				if (data[(head+i)%size]->get_id() == id) return data[i];
 			}
 			return NULL;
+		}
+		void save(){
+			for(int i=0; i<size; i++){
+				if (data[i] != NULL){
+					if (data[i]->dirty){
+						data[i]->save(mPath);
+					}
+				}
+			}
+		}
+		void clean(){
+			for(int i=0; i<size; i++){
+				if (data[i] != NULL){
+					delete data[i];
+					data[i] = NULL;
+				}
+			}
 		}
 
 		int size;
@@ -95,12 +112,15 @@ class NgramSearch{
 		string path_;
 
 		int cnt;	
-
+		void display();
 	public:
 		NgramSearch(string path, int cache_size);
+		~NgramSearch();
 
 		void insert(string key, int value);
 		int query(string key);
+		void save();
+		void load();
 };
 
 

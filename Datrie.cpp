@@ -338,7 +338,7 @@ bool Datrie::double_size() {
 
 	}
 	size *= 2;
-	printf("Size:%-20d\n", size);
+	//printf("Size:%-20d\n", size);
 	finish_flag = true;
 	return true;
 }

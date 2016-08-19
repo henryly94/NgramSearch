@@ -13,7 +13,7 @@ using std::cout;
 using std::endl;
 
 Datrie* a;
-NgramSearch* n;
+NgramSearch *n, *b;
 float MAX;
 
 void query(std::string key){
@@ -78,6 +78,7 @@ int main(int argc, char* argv[]){
 		time_t time_start, time_end;
 
 		time_start = time(NULL);
+		
 
 		while (!in.eof()){
 			in.getline(buffer, 128, '\n');
@@ -107,19 +108,28 @@ int main(int argc, char* argv[]){
 		printf("Now saving...\n");
 
 //		a->save(std::string("test_save"));
-
+//		delete n;	
+//		n->save();
+		delete n;
 		time_start = time(NULL);
 		printf("Time(saving): %.0f s\n", difftime(time_start, time_end));
 
 //		Datrie* b = new Datrie(0);
 		
+		b = new NgramSearch(std::string("test_save"), 4);
+
+			
 		printf("Now loading\n");
+
+		b->load();
+
 /*
 		b->load(std::string("test_save"), 173);
 
 		time_end = time(NULL);
 		printf("Time(loading): %.0f s\n", difftime(time_end, time_start));		
 */
+		printf("Loading complete\n");
 		int e_cnt = 0;
 		exam.open(path.c_str(), std::ios_base::in);
 		while (!exam.eof()){
@@ -128,7 +138,8 @@ int main(int argc, char* argv[]){
 			std::vector<std::string> pair = bin_split(str, de);
 			if (pair.size() == 2){
 				e_cnt++;
-				if (quiet_query2(n, pair[0].c_str()) == atoi(pair[1].c_str())){
+				//printf("Query %s\n", pair[0].c_str());
+				if (quiet_query2(b, pair[0].c_str()) == atoi(pair[1].c_str())){
 					c_cnt++;
 				} else {
 //					printf("%s\n", pair[0].c_str());

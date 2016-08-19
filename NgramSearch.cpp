@@ -2,8 +2,19 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <fstream>
+#include <cstdlib>
+
 using namespace std;
 
+inline void split(int &a, int &b, string &c, string ori){
+	int first = ori.find('\t');
+	a = atoi(ori.substr(0, first).c_str());
+	string tmp = ori.substr(first+1);
+	int second = tmp.find('\t');
+	b = atoi(tmp.substr(0, second).c_str());
+	c = tmp.substr(second+1);
+}
 
 bool cmp(const datrie_info &a, const datrie_info &b){
 	return a.id < b.id;
@@ -18,9 +29,14 @@ NgramSearch::NgramSearch(string path, int cache_size):path_(path), cache_(cache_
 	cnt = 0;
 }
 
+NgramSearch::~NgramSearch(){
+	save();
+	cache_.clean();
+}
 
 void NgramSearch::new_db(string key){
 	datrie_info new_da_entry(cnt, 0, key);
+	//cout << "New db: " << key << '\t' << cnt << '\n';
 	datries_.push_back(new_da_entry);
 	cursor_ = new Datrie(cnt);
 	cache_.push(cursor_);
@@ -68,8 +84,49 @@ void NgramSearch::insert(string key, int value){
 
 int NgramSearch::query(string key){
 	switch_db(key);
-	int tmp = cursor_->word_query(key);
-//	cout << key << "    " << tmp << endl;
-	return tmp;
+	return cursor_->word_query(key);
 }
 
+void NgramSearch::save(){
+	char buf[16] = "/db.info";
+	string path(path_);
+	path.append(buf);
+	ofstream out(path);
+	
+	for (auto each : datries_){
+		out << each.id << '\t' << each.size << '\t' << each.start <<'\n';	
+		//cout << each.start << '\t' << each.id << endl;
+	}
+	out.close();
+	cache_.save();
+}
+
+void NgramSearch::load(){
+	char buf[16] = "/db.info";
+	string path(path_);
+	path.append(buf);
+	ifstream in(path);
+
+	if (!in.is_open()){
+		cout << "No such file when open: " << path << endl;
+		return;
+	}
+
+	int tmp_id, tmp_size;
+	string tmp_start;
+	char buffer[1024];
+	while (!in.eof()){
+		in.getline(buffer, 1024, '\n');
+		split(tmp_id, tmp_size, tmp_start, string(buffer));
+		datries_.push_back(datrie_info(tmp_id, tmp_size, tmp_start));
+	}
+	datries_.pop_back();
+	in.close();
+}
+
+
+void NgramSearch::display(){
+	for (auto each : datries_){
+		cout << each.id << '\t' << each.start << endl;
+	}
+}
