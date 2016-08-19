@@ -20,6 +20,8 @@ using std::endl;
 #define WRITE(x) write((char*)&x, 4)
 #define READ(x) read((char*)&x, 4)
 
+const int Datrie::NULL_VALUE = -1;
+
 inline void d(int n){
 	printf("%d\n", n);
 }
@@ -96,9 +98,18 @@ void Datrie::word_insert(string key, int value){
 		new_word(each);
 		ch = word_hash(each);
 		t = base[s].base + ch;
-		while (t >= size)double_size();
+		while (t >= size){
+			if (!double_size()){
+				finish_flag = false;
+				return;
+			}
+		}
 		if (t <= 0){
-			t = solve_collision(s, t);
+			if ((t = solve_collision(s, t)) == NULL_VALUE){
+				finish_flag = false;
+				return;
+			}
+			
 			base[s].son.push_back(t);
 			s = t;
 		} else if (check[t] == -1){
@@ -108,15 +119,20 @@ void Datrie::word_insert(string key, int value){
 			base[s].son.push_back(t);
 			s = t;	
 		} else if (check[t] != s) { // Collision
-			t = solve_collision(s, t);					       
+			if ((t = solve_collision(s, t)) == NULL_VALUE){
+				finish_flag = false;
+				return;
+			}
 			base[s].son.push_back(t);
 			s = t;
 		} else {
 			s = t;
 		}
 	}
-	base[s].value = value;
 
+	base[s].value = value;
+	dirty = true;
+	finish_flag = true;
 }
 
 void Datrie::new_word(string word){
@@ -124,6 +140,7 @@ void Datrie::new_word(string word){
 		return;
 	} else {
 		alphabet.insert(make_pair(word, hash_cnt));
+		alpha_save.push_back(word);
 		hash_cnt++;
 		RANGE = hash_cnt;
 	}
@@ -179,6 +196,10 @@ int Datrie::get_size(){
 	return size;
 }
 
+int Datrie::get_id(){
+	return ID;
+}
+
 void Datrie::display(int n){
 	if (n > size)
 		n = size;;
@@ -194,12 +215,11 @@ void Datrie::build_alphabet(string path){
 	while (!in.eof()){
 		in >> word;
 		alphabet.insert(std::make_pair(word, hash_cnt));
+		alpha_save.push_back(word);
 		hash_cnt++;
 	}
 	in.close();
 	RANGE = hash_cnt;
-	
-
 	BUILD_FLAG = true;
 }
 
@@ -222,6 +242,7 @@ Datrie::Datrie(int id):ID(id){
 	size = 128;
 	cnt = 0;
 	insert_cnt = 0;
+	dirty = false;
 	base.push_back(node(BEGIN_VALUE, NULL_VALUE));
 	base.resize(size, node(NULL_VALUE, NULL_VALUE));
 	check.push_back(ROOT_VALUE);
@@ -281,11 +302,15 @@ void Datrie::insert(std::string key, int value){
 		}
 	}
 	base[s].value = value;
-
+	dirty = true;
 }
 
-void Datrie::double_size() {
-	if (size>=MAX_SIZE)exit(0);	
+
+bool Datrie::double_size() {
+	if (size>=MAX_SIZE){
+		finish_flag = false;
+		return false;	
+	}
 	check.resize(2*size, NULL_VALUE);
 	base.resize(2*size, node(NULL_VALUE, NULL_VALUE));
 	
@@ -314,6 +339,8 @@ void Datrie::double_size() {
 	}
 	size *= 2;
 	printf("Size:%-20d\n", size);
+	finish_flag = true;
+	return true;
 }
 
 int Datrie::solve_collision(int base_s, int coll_s){
@@ -342,7 +369,12 @@ int Datrie::solve_collision(int base_s, int coll_s){
 		low_bound = std::min(coll_off, *(offsets.begin()));
 	}
 	offsets.push_back(coll_off);
-	new_base = mAreaContainer->get_base(range) - low_bound;
+	int tmp = mAreaContainer->get_base(range);
+	if (tmp != NULL_VALUE){
+		new_base = tmp - low_bound;
+	} else {
+		return NULL_VALUE;
+	}
 	
 	for (std::vector<int>::iterator it = base[base_s].son.begin(); it != base[base_s].son.end(); it++){
 		(*it) += (new_base - old_base);
@@ -350,13 +382,15 @@ int Datrie::solve_collision(int base_s, int coll_s){
 
 	base[base_s].base = new_base;
 
-
 	offsets.pop_back();	
 	for (int off : offsets){
 		int new_pos = new_base + off;
 		int old_pos = old_base + off;
-		while(new_pos >= size)double_size();
-
+		while(new_pos >= size){
+			if(!double_size()){
+				return NULL_VALUE;
+			}
+		}
 		check[new_pos] = base_s;
 		base[new_pos] = base[old_pos];
 
@@ -364,7 +398,6 @@ int Datrie::solve_collision(int base_s, int coll_s){
 		base[old_pos].base = NULL_VALUE;
 		base[old_pos].value = NULL_VALUE;
 		base[old_pos].son.clear();
-
 	
 		mAreaContainer->get_area(area(new_pos));
 		mAreaContainer->ret_area(area(old_pos));
@@ -373,7 +406,6 @@ int Datrie::solve_collision(int base_s, int coll_s){
 	base[new_base + coll_off].base = new_base;
 	check[new_base + coll_off] = base_s;
 	mAreaContainer->get_area(area(new_base + coll_off));
-
 
 	for (int each : offsets){
 		for (int every : base[each + new_base].son){
@@ -391,8 +423,24 @@ void Datrie::save(std::string path){
 	}
 	save_info(path);
 	save_arrays(path);
+	save_alphabet(path);
 	mAreaContainer->save(path);
+	dirty = false;
+}
 
+void Datrie::save_alphabet(std::string path){
+	char buf[128];
+	sprintf(buf, "/%08d.alp", ID);
+	path.append(buf);
+	std::ofstream out(path);
+
+	// Infos
+	
+	for (auto each : alpha_save){
+		out << each << endl;
+	}
+
+	out.close();
 }
 
 void Datrie::save_info(std::string path){
@@ -412,7 +460,7 @@ void Datrie::save_arrays(std::string path){
 	sprintf(buf, "/%08d.nsd", ID);
 	path.append(buf);
 	std::ofstream out(path, std::ios::binary);
-	for (int i=0; i<=cnt; i++){
+	for (int i=0; i<cnt; i++){
 		if (check[i] != NULL_VALUE){
 			out.WRITE(i);
 			out.WRITE(base[i].base);
@@ -420,17 +468,16 @@ void Datrie::save_arrays(std::string path){
 			out.WRITE(check[i]);
 			int tmp_size = base[i].son.size();
 			out.WRITE(tmp_size);
-
 			for (int each : base[i].son){
 				out.WRITE(each);
 			}
 		}
 	}
-
 	out.close();
 }
 
-void Datrie::load(std::string path, int id, Datrie::loadmode lm){	
+void Datrie::load(std::string path, int id, Datrie::loadmode lm){
+	//printf("Load %s id %d\n", path.c_str(), id);	
 	DIR* dir_p = opendir(path.c_str());
 	if (dir_p == NULL)
 		printf("Wrong Directory when loading:%s, id = %d\n", path.c_str(), id);
@@ -501,6 +548,21 @@ void Datrie::load(std::string path, int id, Datrie::loadmode lm){
 				mAreaContainer->areas.insert(new_area);
 				mAreaContainer->blocks.insert(new_area);
 			}
+			in.close();
+
+			path = base_path;
+			sprintf(buf, "/%08d.alp", id);
+			path.append(buf);
+			in.open(path.c_str(), std::ios_base::in);
+			if (!in.is_open()){
+				printf("No such file when open:%s\n", path.c_str());
+				return;
+			}
+			while (!in.eof()){
+				std::string tmp_word;
+				in >> tmp_word;
+				new_word(tmp_word);
+			}	
 			
 			break;
 		case Add:
@@ -534,8 +596,11 @@ int AreaContainer::get_base(int range){
 	if (it != blocks.end()){
 		return (*it).start;
 	} else {
-		mDatrie->double_size();
-		return get_base(range);	
+		if (mDatrie->double_size()){
+			return get_base(range);	
+		} else {
+			return Datrie::NULL_VALUE;
+		}
 	}
 }
 

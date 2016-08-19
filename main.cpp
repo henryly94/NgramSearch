@@ -1,4 +1,5 @@
 #include "Datrie.hpp"
+#include "NgramSearch.hpp"
 #include <string>
 #include <stdio.h>
 #include <fstream>
@@ -12,6 +13,7 @@ using std::cout;
 using std::endl;
 
 Datrie* a;
+NgramSearch* n;
 float MAX;
 
 void query(std::string key){
@@ -21,6 +23,11 @@ void query(std::string key){
 int quiet_query(Datrie* da, std::string key){
 	return da->word_query(key);
 }
+
+int quiet_query2(NgramSearch* da, std::string key){
+	return da->query(key);
+}
+
 
 
 std::vector<std::string> bin_split(std::string ori_string, char delim=' '){
@@ -61,10 +68,11 @@ int main(int argc, char* argv[]){
 		char buffer[128];
 
 		a = new Datrie(173);
-
+		
+		n = new NgramSearch(std::string("test_save"), 4);
 		//a->build_alphabet(word_path);
 
-		AreaContainer* container = a->get_areaContainer();
+		//AreaContainer* container = a->get_areaContainer();
 		int cnt = 0, c_cnt = 0;
 
 		time_t time_start, time_end;
@@ -78,7 +86,8 @@ int main(int argc, char* argv[]){
 			if (pair.size() == 2){
 				cnt++;
 				try{
-					a->word_insert(pair[0].c_str(), atoi(pair[1].c_str()));
+					//a->word_insert(pair[0].c_str(), atoi(pair[1].c_str()));
+					n->insert(pair[0], atoi(pair[1].c_str()));
 				} catch (std::bad_alloc &ba){
 					std::cerr << "bad_alloc caught:" << ba.what() << '\n';
 					break;
@@ -87,22 +96,22 @@ int main(int argc, char* argv[]){
 
 				//pairs.push_back(str);
 			}
-			printf("----%d%%----%d/%.0f\r", (int)(100 * (cnt / MAX)), cnt, MAX);
+			printf("--------------------------%d%%----%d/%.0f\r", (int)(100 * (cnt / MAX)), cnt, MAX);
 			fflush(stdout);
 		}
 		printf("\n");
-		printf("Using rate: %.3f %%\n", container->used_rate() * 100 );
+		//printf("Using rate: %.3f %%\n", container->used_rate() * 100 );
 		time_end = time(NULL);
 		printf("Time: %.0f s\n", difftime(time_end, time_start));
 
 		printf("Now saving...\n");
 
-		a->save(std::string("test_save"));
+//		a->save(std::string("test_save"));
 
 		time_start = time(NULL);
 		printf("Time(saving): %.0f s\n", difftime(time_start, time_end));
 
-		Datrie* b = new Datrie(0);
+//		Datrie* b = new Datrie(0);
 		
 		printf("Now loading\n");
 /*
@@ -119,7 +128,7 @@ int main(int argc, char* argv[]){
 			std::vector<std::string> pair = bin_split(str, de);
 			if (pair.size() == 2){
 				e_cnt++;
-				if (quiet_query(a, pair[0].c_str()) == atoi(pair[1].c_str())){
+				if (quiet_query2(n, pair[0].c_str()) == atoi(pair[1].c_str())){
 					c_cnt++;
 				} else {
 //					printf("%s\n", pair[0].c_str());

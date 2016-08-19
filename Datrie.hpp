@@ -8,7 +8,7 @@
 
 #define UP '~'
 #define DOWN '!'
-#define MAX_SIZE 1000000000
+#define MAX_SIZE 10000000
 #define BATCH_MAX 2500
 #define USED_RATE_LIMIT 0.4
 
@@ -109,10 +109,19 @@ class Datrie{
 		//======================================
 		//	Support class members
 		//======================================
+		const static int NULL_VALUE;
+		int LEAF_VALUE = -2;
+		int ROOT_VALUE = -3;
+		int UNEXIST_VALUE = -1;
+		int BEGIN_VALUE = 1;
 
 		friend class AreaContainer;
 
+		bool dirty;
+
 		int get_size();
+		
+		int get_id();
 
 		AreaContainer* get_areaContainer();
 
@@ -125,6 +134,8 @@ class Datrie{
 		void display_used();
 
 		//Temp variable to check time consumption
+		
+		bool finish_flag;
 		int solve_cnt;
 		double solve_time, solve_1, solve_2, solve_3, solve_3_1, solve_3_2, solve_3_3;
 
@@ -132,6 +143,8 @@ class Datrie{
 		int ID;
 
 		unordered_map<string,int> alphabet;
+		
+		vector<string> alpha_save;
 
 		bool BUILD_FLAG = false;
 
@@ -147,11 +160,6 @@ class Datrie{
 
 		// Predetermined Values
 		int RANGE = 65;
-		int NULL_VALUE = -1;
-		int LEAF_VALUE = -2;
-		int ROOT_VALUE = -3;
-		int UNEXIST_VALUE = -1;
-		int BEGIN_VALUE = 1;
 		
 		// Remain area manager
 		AreaContainer* mAreaContainer;	
@@ -166,7 +174,8 @@ class Datrie{
 		int solve_collision(int base_s, int coll_s);
 		void save_arrays(std::string path);
 		void save_info(std::string path);
-		void double_size();		
+		void save_alphabet(std::string path);
+		bool double_size();		
 		void try_clean();
 };
 
