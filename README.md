@@ -1,39 +1,45 @@
 # NgramSearchEngine
-A N-grams Search Engine based on trie
+A N-grams Search Engine based on Trie
 
 # Usage
-Include "Datrie.hpp"
+Include "NgramSearch.hpp"
+
+Init:
+	NgramSearch(string path, int cache_size)
+	:param path		: the directory to save whole DB
+	:param cache_size	: Maximun amount of datrie that kept in memory
+
 User Interface
-	void insert(char* key, int value) Or void insert(string key, int value)
-	int query(char* key) Or int query(string key)
-	void save(string path)
-	void load(string path)
+	void insert(string key, int value)
+	int query(string key)
+	void save()
+	void load()
 # Example
 
 ```
-#include "Datrie.hpp"
+#include "NgramSearch.hpp"
 #include <stdio.h>
 #include <string.h>
 using namspace std;
 int main(){
 
-	//Arg here is an ID
-	Datrie a(173);
-	a.insert("abc", 123);
-	a.insert("hello world", 456);
+	NgramSearch a(string("test_save"), 3);
+	a.insert(string("abc"), 123);
+	a.insert(string("hello world"), 456);
   
-	printf("%d\n", a.query("abc"));
-	printf("%d\n", a.query("hello world"));
+	printf("%d\n", a.query(string("abc")));
+	printf("%d\n", a.query(string("hello world")));
 	
-	string path("test_save");
 
-	a.save(path);
+	a.save();
 
 	//Should has same ID
-	Datrie b(173);
+	Datrie b(string("test_save"), 5);
 	
-	b.load(path);
-
+	b.load();
+	printf("%d\n", b.query(string("abc")));
+	printf("%d\n", b.query(string("hello world")));
+	
 	return 0;
 }
 ```
