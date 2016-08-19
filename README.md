@@ -24,6 +24,7 @@ using namspace std;
 int main(){
 
 	NgramSearch a(string("test_save"), 3);
+
 	a.insert(string("abc"), 123);
 	a.insert(string("hello world"), 456);
   
@@ -34,7 +35,7 @@ int main(){
 	a.save();
 
 	//Should has same ID
-	Datrie b(string("test_save"), 5);
+	NgramSearch b(string("test_save"), 5);
 	
 	b.load();
 	printf("%d\n", b.query(string("abc")));
